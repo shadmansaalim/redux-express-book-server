@@ -150,8 +150,13 @@ const run = async () => {
             }
 
             if (publicationYear) {
-                const regex = new RegExp(`^${publicationYear}-`, "i");
-                filter.publicationDate = regex;
+                const yearFilter = parseInt(publicationYear);
+
+                if (!isNaN(yearFilter)) {
+                    filter.publicationDate = {
+                        $regex: `.*${yearFilter}.*`
+                    };
+                }
             }
 
             result = await booksCollection.find(filter).toArray();
