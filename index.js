@@ -29,6 +29,8 @@ const run = async () => {
         app.post("/auth/signup", async (req, res) => {
             const userData = req.body;
 
+            console.log(userData);
+
             // Checking whether exists or not
             const userExists = await usersCollection.findOne({
                 email: userData.email
@@ -37,7 +39,7 @@ const run = async () => {
             if (!userExists) {
                 userData.password = await bcrypt.hash(userData.password, 12);
 
-                const result = await usersCollection.insertOne(3);
+                const result = await usersCollection.insertOne(userData);
 
                 if (result.acknowledged) {
                     res.status(200).json({
@@ -103,6 +105,8 @@ const run = async () => {
 
                 if (verifiedUser) {
                     const bookData = req.body;
+                    bookData.publishedDate = new Date();
+
                     const result = await booksCollection.insertOne(bookData);
 
                     if (result.acknowledged) {
