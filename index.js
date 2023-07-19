@@ -4,8 +4,6 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 8080;
 
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 
 const cors = require("cors");
 require("dotenv").config();
@@ -26,41 +24,22 @@ const run = async () => {
         const booksCollection = db.collection("books");
 
         app.post("/books/add-book", async (req, res) => {
-            const authorizeToken = req.headers.authorization;
+            const bookData = req.body;
+            bookData.publishedDate = new Date();
 
+            const result = await booksCollection.insertOne(bookData);
 
-            if (authorizeToken) {
-                const verifiedUser = jwt.verify(authorizeToken, process.env.JWT_SECRET);
-
-                if (verifiedUser) {
-                    const bookData = req.body;
-                    bookData.publishedDate = new Date();
-
-                    const result = await booksCollection.insertOne(bookData);
-
-                    if (result.acknowledged) {
-                        res.status(200).json({
-                            message: "Book added successfully",
-                            book: bookData,
-                        });
-                    } else {
-                        res.status(400).json({
-                            message: "Failed to add book.",
-                        });
-                    }
-                }
-                else {
-                    res.status(400).json({
-                        message: "Unauthorized",
-                    });
-                }
-            }
-            else {
-                res.status(400).json({
-                    message: "Unauthorized",
+            if (result.acknowledged) {
+                res.status(200).json({
+                    message: "Book added successfully",
+                    book: bookData,
                 });
-
+            } else {
+                res.status(400).json({
+                    message: "Failed to add book.",
+                });
             }
+
         });
 
         app.get("/all-books", async (req, res) => {
@@ -127,109 +106,75 @@ const run = async () => {
         });
 
         app.put("/books/:id", async (req, res) => {
-            const authorizeToken = req.headers.authorization;
+            const bookId = req.params.id;
+            const updatedBookData = req.body;
 
-            if (authorizeToken) {
-                const verifiedUser = jwt.verify(authorizeToken, process.env.JWT_SECRET);
+            const book = await booksCollection.findOne({ _id: new ObjectId(bookId) });
 
-                if (verifiedUser) {
-                    const bookId = req.params.id;
-                    const updatedBookData = req.body;
-
-                    const book = await booksCollection.findOne({ _id: new ObjectId(bookId) });
-
-                    if (!book) {
-                        res.status(404).json({
-                            message: "Book doesn't exists.",
-                        });
-                    }
-
-                    // Only book owner can edit/delete the book
-                    if (book.email !== verifiedUser.email) {
-                        res.status(400).json({
-                            message: "You are not authorized to update book details.",
-                        });
-                    }
-
-                    const result = await booksCollection.updateOne(
-                        { _id: new ObjectId(bookId) },
-                        { $set: updatedBookData },
-                    );
-
-                    if (result.modifiedCount > 0) {
-                        res.status(200).json({
-                            message: "Book updated successfully!",
-                            book: updatedBookData,
-                        });
-                    } else {
-                        res.status(404).json({
-                            message: "Failed to updated book details.",
-                        });
-                    }
-                }
-                else {
-                    res.status(400).json({
-                        message: "Unauthorized",
-                    });
-                }
-            }
-            else {
-                res.status(400).json({
-                    message: "Unauthorized",
+            if (!book) {
+                res.status(404).json({
+                    message: "Book doesn't exists.",
                 });
             }
+
+            // Only book owner can edit/delete the book
+            if (book.email !== verifiedUser.email) {
+                res.status(400).json({
+                    message: "You are not authorized to update book details.",
+                });
+            }
+
+            const result = await booksCollection.updateOne(
+                { _id: new ObjectId(bookId) },
+                { $set: updatedBookData },
+            );
+
+            if (result.modifiedCount > 0) {
+                res.status(200).json({
+                    message: "Book updated successfully!",
+                    book: updatedBookData,
+                });
+            } else {
+                res.status(404).json({
+                    message: "Failed to updated book details.",
+                });
+            }
+
         });
 
         app.delete("/books/:id", async (req, res) => {
-            const authorizeToken = req.headers.authorization;
 
-            if (authorizeToken) {
-                const verifiedUser = jwt.verify(authorizeToken, process.env.JWT_SECRET);
+            const bookId = req.params.id;
 
-                if (verifiedUser) {
-                    const bookId = req.params.id;
-
-                    const book = await booksCollection.findOne({ _id: new ObjectId(bookId) });
+            const book = await booksCollection.findOne({ _id: new ObjectId(bookId) });
 
 
-                    if (!book) {
-                        res.status(404).json({
-                            message: "Book doesn't exists.",
-                        });
-                    }
+            if (!book) {
+                res.status(404).json({
+                    message: "Book doesn't exists.",
+                });
+            }
 
-                    // Only book owner can edit/delete the book
-                    if (book.email !== verifiedUser.email) {
-                        res.status(400).json({
-                            message: "You are not authorized to delete book.",
-                        });
-                    }
+            // Only book owner can edit/delete the book
+            if (book.email !== verifiedUser.email) {
+                res.status(400).json({
+                    message: "You are not authorized to delete book.",
+                });
+            }
 
-                    const result = await booksCollection.deleteOne(
-                        { _id: new ObjectId(bookId) }
-                    );
+            const result = await booksCollection.deleteOne(
+                { _id: new ObjectId(bookId) }
+            );
 
-                    if (result.deletedCount > 0) {
-                        res.status(200).json({
-                            message: "Book deleted successfully!",
-                            book: book
-                        });
-                    }
-                    else {
-                        res.status(404).json({
-                            message: "Failed to delete book.",
-                        });
-                    }
-                }
-                else {
-                    res.status(400).json({
-                        message: "Unauthorized",
-                    });
-                }
+            if (result.deletedCount > 0) {
+                res.status(200).json({
+                    message: "Book deleted successfully!",
+                    book: book
+                });
             }
             else {
-                res.status(400).json({
-                    message: "Unauthorized",
+                res.status(404).json({
+                    message: "Failed to delete book.",
                 });
             }
         });
