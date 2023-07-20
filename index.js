@@ -25,6 +25,7 @@ const run = async () => {
 
         app.post("/books/add-book", async (req, res) => {
             const bookData = req.body;
+            console.log(bookData);
             bookData.publishedDate = new Date();
 
             const result = await booksCollection.insertOne(bookData);
@@ -140,6 +141,29 @@ const run = async () => {
                 });
             }
 
+        });
+        app.post('/books/reviews/:id', async (req, res) => {
+            console.log("HIT")
+            const bookId = req.params.id;
+            const review = req.body.review;
+
+            console.log(review);
+
+            const result = await booksCollection.updateOne(
+                { _id: new ObjectId(bookId) },
+                { $push: { reviews: review } }
+            );
+
+            console.log(result);
+
+            if (result.modifiedCount !== 1) {
+                console.error('Book not found or review not added');
+                res.json({ error: 'Book not found or review not added' });
+                return;
+            }
+
+            console.log('Review added successfully');
+            res.json({ message: 'Review added successfully' });
         });
 
         app.delete("/books/:id", async (req, res) => {
