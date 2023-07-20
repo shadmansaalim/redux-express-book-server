@@ -110,6 +110,8 @@ const run = async () => {
             const bookId = req.params.id;
             const updatedBookData = req.body;
 
+            delete updatedBookData._id;
+
             const book = await booksCollection.findOne({ _id: new ObjectId(bookId) });
 
             if (!book) {
@@ -118,17 +120,13 @@ const run = async () => {
                 });
             }
 
-            // Only book owner can edit/delete the book
-            if (book.email !== verifiedUser.email) {
-                res.status(400).json({
-                    message: "You are not authorized to update book details.",
-                });
-            }
 
             const result = await booksCollection.updateOne(
                 { _id: new ObjectId(bookId) },
                 { $set: updatedBookData },
             );
+
+            console.log(result);
 
             if (result.modifiedCount > 0) {
                 res.status(200).json({
@@ -176,13 +174,6 @@ const run = async () => {
             if (!book) {
                 res.status(404).json({
                     message: "Book doesn't exists.",
-                });
-            }
-
-            // Only book owner can edit/delete the book
-            if (book.email !== verifiedUser.email) {
-                res.status(400).json({
-                    message: "You are not authorized to delete book.",
                 });
             }
 
